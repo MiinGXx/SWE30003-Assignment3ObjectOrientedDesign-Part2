@@ -1,4 +1,4 @@
-# State Park CLI — ProposedProgram
+# National Park Manager Application
 
 This repository contains a small command-line application for managing state parks, selling tickets and merchandise, and customer/admin flows.
 
@@ -88,3 +88,4 @@ python -m tests.run_tests
 
 ## Contact
 If you want improvements or CI integrations, tell me what you'd like next (examples: add a `requirements-dev.txt`, add a `pyproject.toml`, create CI workflow that runs `tests/run_tests.py`).
+
