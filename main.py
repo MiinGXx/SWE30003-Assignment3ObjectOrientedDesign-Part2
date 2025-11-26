@@ -11,11 +11,9 @@ persistence live in their respective modules.
 """
 
 import sys
-import uuid
-from datetime import datetime
 from database import Database
-from models import Park, Schedule, LineItem, Order, Ticket, SupportTicket, Customer, Admin, Merchandise
-from services import AuthenticationManager, AuditLog, RefundRequest
+from models import Customer, Admin
+from services import AuthenticationManager, AuditLog
 from controllers import CustomerConsole, AdminConsole
 
 # Initialize DB (Seed if empty)
