@@ -179,6 +179,36 @@ class Park:
         p.save()
         return p
 
+    @classmethod
+    def load_by_park_id(cls, park_id):
+        """Load a Park instance by its `park_id` or return None."""
+        doc = Database.parks_col.find_one({'park_id': park_id})
+        if not doc:
+            return None
+        return cls(**doc)
+
+    @classmethod
+    def get_all(cls):
+        """Return all parks as Park instances."""
+        docs = Database.get_all_parks()
+        return [cls(**d) for d in docs]
+
+    @classmethod
+    def try_book(cls, park_id, visit_date, qty):
+        """Attempt to book `qty` spots for a park schedule.
+
+        Returns the same values as `Database.atomic_book_spots`:
+          True  -> success
+          False -> insufficient capacity
+          None  -> park/schedule not found
+        """
+        return Database.atomic_book_spots(park_id, visit_date, qty)
+
+    @classmethod
+    def decrement_occupancy(cls, park_id, visit_date, qty):
+        """Decrement occupancy for a park schedule via DB helper."""
+        return Database.decrement_schedule_occupancy(park_id, visit_date, qty)
+
 class Merchandise:
     """Simple merchandise item with stock management helpers.
 
@@ -231,6 +261,19 @@ class Merchandise:
     def __str__(self):
         return f"{self.name} (${self.price}) - Stock: {self.stock_quantity}"
 
+    @classmethod
+    def load_by_sku(cls, sku):
+        doc = Database.merch_col.find_one({'sku': sku})
+        if not doc:
+            return None
+        return cls(doc.get('sku'), doc.get('name'), doc.get('price'), doc.get('stock_quantity'), _id=doc.get('_id'))
+
+    @classmethod
+    def get_all(cls):
+        """Return all merchandise items as Merchandise instances."""
+        docs = Database.get_all_merchandise()
+        return [cls(d.get('sku'), d.get('name'), d.get('price'), d.get('stock_quantity'), _id=d.get('_id')) for d in docs]
+
 class Ticket:
     """Lightweight in-memory representation of a purchased ticket.
 
@@ -255,6 +298,52 @@ class Ticket:
 
     def __str__(self):
         return f"[ID: {self.ticket_id}] {self.park_name} on {self.visit_date} ({self.status})"
+
+    @classmethod
+    def load_by_id(cls, ticket_id):
+        doc = Database.reservations_col.find_one({'ticket_id': ticket_id})
+        if not doc:
+            return None
+        return cls(doc.get('owner_id'), doc.get('park_name'), doc.get('visit_date'), doc.get('price'), ticket_id=doc.get('ticket_id'), status=doc.get('status'), park_id=doc.get('park_id'))
+
+    @classmethod
+    def create(cls, owner_id, park_id, park_name, visit_date, price):
+        """Create persistent ticket(s) and return ticket id and Ticket instance/doc."""
+        tid, doc = Database.create_ticket(owner_id, park_id, park_name, visit_date, price)
+        return tid, cls(doc.get('owner_id'), doc.get('park_name'), doc.get('visit_date'), doc.get('price'), ticket_id=doc.get('ticket_id'), status=doc.get('status'), park_id=doc.get('park_id'))
+
+    @classmethod
+    def find_by_owner(cls, owner_id, status=None):
+        """Return list of ticket documents for owner (optionally filtered by status)."""
+        query = {'owner_id': owner_id}
+        if status:
+            query['status'] = status
+        try:
+            docs = list(Database.reservations_col.find(query))
+        except Exception:
+            return []
+        return docs
+
+    @classmethod
+    def update_visit_date(cls, ticket_id, new_date):
+        """Update the visit_date field for a persistent ticket."""
+        try:
+            Database.reservations_col.update_one({'ticket_id': ticket_id}, {'$set': {'visit_date': new_date}})
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def set_status(cls, ticket_id, status):
+        """Set the persistent ticket status via Database helper.
+
+        Returns True on success, False on error.
+        """
+        try:
+            Database.update_ticket_status(ticket_id, status)
+            return True
+        except Exception:
+            return False
 
 class LineItem:
     """Represents an item in a Cart or Order.
@@ -330,6 +419,29 @@ class Order:
             "payment_status": self.payment_status
         }
 
+    def save(self):
+        """Persist this order to the orders collection."""
+        Database.add_order(self.to_dict())
+
+    @classmethod
+    def load_by_id(cls, order_id):
+        doc = Database.orders_col.find_one({'order_id': order_id})
+        if not doc:
+            return None
+        o = cls(doc.get('user_id'), doc.get('line_items'), doc.get('total_cost'))
+        o.order_id = doc.get('order_id')
+        o.date = doc.get('date')
+        o.payment_status = doc.get('payment_status', 'PAID')
+        return o
+
+    @classmethod
+    def get_all(cls):
+        """Return raw order documents for reporting and analysis."""
+        try:
+            return Database.get_all_orders()
+        except Exception:
+            return []
+
 class SupportTicket:
     """Support ticket created by a user to report issues.
 
@@ -349,11 +461,32 @@ class SupportTicket:
         self.resolution = notes
         Database.update_support_ticket(self.id, notes)
 
+    def save(self):
+        """Persist this support ticket to the support_tickets collection."""
+        try:
+            Database.add_support_ticket(self.to_dict())
+        except Exception:
+            raise
+
     def to_dict(self):
         return {
             "id": self.id, "user_id": self.user_id, "description": self.description,
             "status": self.status, "resolution": self.resolution
         }
+
+    @classmethod
+    def get_open(cls):
+        try:
+            return list(Database.tickets_col.find({'status': 'OPEN'}))
+        except Exception:
+            return []
+
+    @classmethod
+    def load_by_id(cls, ticket_id):
+        doc = Database.tickets_col.find_one({'id': ticket_id})
+        if not doc:
+            return None
+        return cls(doc.get('user_id'), doc.get('description'), status=doc.get('status'), resolution=doc.get('resolution'), id=doc.get('id'))
 
 # ==========================
 # USER HIERARCHY
@@ -512,6 +645,70 @@ class Customer(User):
         })
         return base
 
+    @classmethod
+    def load_by_id(cls, user_id):
+        doc = Database.get_user_by_id(user_id)
+        if not doc:
+            return None
+        return cls(
+            doc.get('user_id'),
+            doc.get('name'),
+            doc.get('email'),
+            doc.get('password'),
+            age_group=doc.get('age_group'),
+            gender=doc.get('gender'),
+            region=doc.get('region'),
+            visitor_type=doc.get('visitor_type'),
+            marketing_opt_in=doc.get('marketing_opt_in', False)
+        )
+
+    @classmethod
+    def load_by_email(cls, email):
+        doc = Database.get_user(email)
+        if not doc:
+            return None
+        return cls.load_by_id(doc.get('user_id'))
+
+    @classmethod
+    def count_customers(cls):
+        try:
+            return Database.users_col.count_documents({"role": "Customer"})
+        except Exception:
+            return 0
+
+    def save(self):
+        """Persist this customer to the users collection."""
+        Database.add_user(self)
+
+    def update_profile(self, profile_fields: dict):
+        Database.update_user_profile(self.user_id, profile_fields)
+        for k, v in profile_fields.items():
+            setattr(self, k, v)
+
 class Admin(User):
     def get_role(self):
         return "Admin"
+
+    @classmethod
+    def load_by_email(cls, email):
+        doc = Database.get_user(email)
+        if not doc or doc.get('role') != 'Admin':
+            return None
+        return cls(doc.get('user_id'), doc.get('name'), doc.get('email'), doc.get('password'))
+
+
+class Audit:
+    """Small helper to centralise audit log persistence behind models.
+
+    Services and other higher-level components should call
+    `Audit.log(entry)` and `Audit.get_all()` rather than touching
+    `Database` directly.
+    """
+
+    @staticmethod
+    def log(entry):
+        Database.log_audit(entry)
+
+    @staticmethod
+    def get_all():
+        return Database.get_audit_logs()
