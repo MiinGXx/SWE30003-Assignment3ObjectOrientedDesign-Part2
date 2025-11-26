@@ -163,7 +163,7 @@ class AdminConsole:
             print("3. Delete Park")
             print("4. List Parks")
             print("0. Back")
-            choice = input("Choice: ").strip()
+            choice = input("Select (number, 0 to go back): ").strip()
             if choice == '0':
                 return
 
@@ -198,6 +198,21 @@ class AdminConsole:
                     except Exception:
                         print("Enter a valid integer for max capacity.")
 
+                # Ticket price for this park (required)
+                while True:
+                    try:
+                        tprice_in = input("Ticket price (e.g. 12.50): ").strip()
+                        if tprice_in == '':
+                            print("Ticket price is required.")
+                            continue
+                        ticket_price = float(tprice_in)
+                        if ticket_price < 0:
+                            print("Ticket price must be non-negative.")
+                            continue
+                        break
+                    except Exception:
+                        print("Enter a valid numeric price (e.g. 12.50).")
+
                 # Prompt for schedules
                 try:
                     num_sched = int(input("How many schedules to add (0 for none)? "))
@@ -220,7 +235,7 @@ class AdminConsole:
                     scheds.append(Schedule(date))
 
                 try:
-                    park = Park.add_park(name, loc, desc, schedules=scheds, max_capacity=maxc)
+                    park = Park.add_park(name, loc, desc, schedules=scheds, max_capacity=maxc, ticket_price=ticket_price)
                     AuditLog.log(admin_user.name, "SYSTEM", f"Added Park {name} ({park.park_id})")
                     print(f"Park {name} ({park.park_id}) added.")
                 except Exception as e:
@@ -236,7 +251,7 @@ class AdminConsole:
                 for i, p in enumerate(parks):
                     print(f"{i+1}. {p.get('name')} ({p.get('park_id')})")
                 try:
-                    idx = int(input("Choice (number, 0 to go back): ").strip()) - 1
+                    idx = int(input("Select (number, 0 to go back): ").strip()) - 1
                 except Exception:
                     print("Invalid input.")
                     continue
@@ -257,8 +272,9 @@ class AdminConsole:
                     print("3. Edit Description")
                     print("4. Edit Max Capacity")
                     print("5. Manage Schedules")
+                    print("6. Edit Ticket Price")
                     print("0. Back")
-                    sub = input("Choice: ").strip()
+                    sub = input("Select (number, 0 to go back): ").strip()
                     if sub == '0':
                         break
                     if sub == '1':
@@ -371,7 +387,7 @@ class AdminConsole:
                             print(f"Selected: {sched}")
                             print("1. Delete schedule")
                             print("0. Back")
-                            sub2 = input("Choice: ").strip()
+                            sub2 = input("Select (number, 0 to go back): ").strip()
                             if sub2 == '0':
                                 continue
                             if sub2 == '1':
@@ -388,6 +404,33 @@ class AdminConsole:
                                     print("Canceled.")
                             else:
                                 print("Invalid choice.")
+
+                    elif sub == '6':
+                        # Edit ticket price
+                        while True:
+                            try:
+                                # Show current price to the admin when prompting
+                                current_display = f"${park.ticket_price:.2f}" if park.ticket_price is not None else "NOT SET"
+                                newp = input(f"New ticket price (current: {current_display}) : ").strip()
+                                if newp == '':
+                                    price_val = park.ticket_price
+                                    break
+                                price_val = float(newp)
+                                if price_val < 0:
+                                    print("Price must be non-negative.")
+                                    continue
+                                break
+                            except Exception:
+                                print("Invalid input. Enter a numeric price or press Enter to keep current.")
+                        try:
+                            park.ticket_price = price_val
+                            park.save()
+                            AuditLog.log(admin_user.name, "SYSTEM", f"Updated Park ticket price {park.park_id} -> {price_val}")
+                            print("Ticket price updated.")
+                        except Exception as e:
+                            print(f"Failed to update ticket price: {e}")
+                        continue
+
                     else:
                         print("Invalid selection.")
 
@@ -401,7 +444,7 @@ class AdminConsole:
                 for i, p in enumerate(parks):
                     print(f"{i+1}. {p.get('name')} ({p.get('park_id')})")
                 try:
-                    idx = int(input("Choice (number, 0 to go back): ").strip()) - 1
+                    idx = int(input("Select (number, 0 to go back): ").strip()) - 1
                 except Exception:
                     print("Invalid input.")
                     continue
@@ -434,6 +477,10 @@ class AdminConsole:
                     print(f"{i+1}. {park.name} ({park.park_id})")
                     print(f"   Location: {park.location}")
                     print(f"   Description: {park.description}")
+                    if park.ticket_price is None:
+                        print(f"   Ticket price: NOT SET")
+                    else:
+                        print(f"   Ticket price: ${park.ticket_price:.2f}")
                     if park.schedules:
                         print("   Schedules:")
                         for s in park.schedules:
@@ -460,7 +507,7 @@ class AdminConsole:
             print("3. Delete Merchandise")
             print("4. List Merchandise")
             print("0. Back")
-            choice = input("Choice: ").strip()
+            choice = input("Select (number, 0 to go back): ").strip()
             if choice == '0':
                 return
 
@@ -528,7 +575,7 @@ class AdminConsole:
                 for i, m in enumerate(merch_data):
                     print(f"{i+1}. {m.get('name')} (SKU: {m.get('sku')})")
                 try:
-                    idx = int(input("Choice (number, 0 to go back): ").strip()) - 1
+                    idx = int(input("Select (number, 0 to go back): ").strip()) - 1
                 except Exception:
                     print("Invalid input.")
                     continue
@@ -546,7 +593,7 @@ class AdminConsole:
                     print("2. Edit Price")
                     print("3. Edit Stock")
                     print("0. Back")
-                    sub = input("Choice: ").strip()
+                    sub = input("Select (number, 0 to go back): ").strip()
                     if sub == '0':
                         break
                     if sub == '1':
@@ -598,7 +645,7 @@ class AdminConsole:
                 for i, m in enumerate(merch_data):
                     print(f"{i+1}. {m.get('name')} (SKU: {m.get('sku')})")
                 try:
-                    idx = int(input("Choice (number, 0 to go back): ").strip()) - 1
+                    idx = int(input("Select (number, 0 to go back): ").strip()) - 1
                 except Exception:
                     print("Invalid input.")
                     continue
@@ -648,7 +695,7 @@ class AdminConsole:
 
         while True:
             try:
-                idx = int(input("Resolve (number, 0 to go back): ")) - 1
+                idx = int(input("Select (number, 0 to go back): ").strip()) - 1
             except Exception:
                 print("Invalid input.")
                 continue

@@ -197,6 +197,7 @@ class Database:
                 {
                     "park_id": "P01", "name": "Bako National Park", "location": "Sarawak", "description": "Oldest national park.",
                     "max_capacity": 20,
+                    "ticket_price": 10.00,
                     "schedules": [
                         {"visit_date": "2025-12-01", "current_occupancy": 0},
                         {"visit_date": "2025-12-02", "current_occupancy": 0}
@@ -205,6 +206,7 @@ class Database:
                 {
                     "park_id": "P02", "name": "Niah National Park", "location": "Miri", "description": "Famous for caves.",
                     "max_capacity": 50,
+                    "ticket_price": 15.00,
                     "schedules": [
                         {"visit_date": "2025-12-01", "current_occupancy": 0}
                     ]

@@ -133,15 +133,22 @@ class CLI:
 
         print("\nSelect Park:")
         for i, p in enumerate(parks):
-            ticket_price = 50.00
+            ticket_price = p.ticket_price
             print(f"{i+1}. {p.name}")
             print(f"   Location: {p.location}")
             print(f"   Description: {p.description}")
             print(f"   Max capacity: {p.max_capacity}")
-            print(f"   Ticket price: ${ticket_price:.2f}")
+            if ticket_price is None:
+                print(f"   Ticket price: NOT SET (contact admin)")
+            else:
+                print(f"   Ticket price: ${ticket_price:.2f}")
 
+        print("\n0. Back")
+        sel = input("Select (number, 0 to go back): ").strip()
+        if sel == '0':
+            return
         try:
-            p_idx = int(input("Choice: ")) - 1
+            p_idx = int(sel) - 1
             selected_park = parks[p_idx]
         except Exception:
             print("Invalid park selection.")
@@ -199,7 +206,11 @@ class CLI:
 
         # Persistable metadata (avoid storing full objects)
         meta = {'date': schedule.visit_date, 'park_id': selected_park.park_id, 'park_name': selected_park.name}
-        item = LineItem('TICKET', selected_park, qty, 50.00, meta)
+        price = selected_park.ticket_price
+        if price is None:
+            print("Cannot add tickets: ticket price for this park is not set. Contact an admin.")
+            return
+        item = LineItem('TICKET', selected_park, qty, price, meta)
         customer.add_to_cart(item)
         print(f"\nAdded {qty} tickets for {selected_park.name} on {date_in} to cart for checkout.")
         # Return to customer menu after adding to cart
@@ -348,7 +359,7 @@ class CLI:
         print("1. Manage Bookings")
         print("2. View Tickets")
         print("0. Back")
-        choice = input("Choice: ").strip()
+        choice = input("Select (number, 0 to go back): ").strip()
         if choice == '1':
             self.manage_bookings(customer)
         elif choice == '2':
@@ -372,7 +383,7 @@ class CLI:
             print(f"{i+1}. [{t.get('ticket_id')}] {t.get('park_name')} on {t.get('visit_date')} (Status: {t.get('status')})")
 
         try:
-            sel = int(input("Select ticket to view (number, 0 to go back): ").strip()) - 1
+            sel = int(input("Select (number, 0 to go back): ").strip()) - 1
         except Exception:
             print("Invalid input.")
             return
@@ -434,7 +445,7 @@ class CLI:
             print(f"{i+1}. [{t.get('ticket_id')}] {t.get('park_name')} on {t.get('visit_date')}")
 
         try:
-            sel = int(input("Select booking (number, 0 to go back): ")) - 1
+            sel = int(input("Select (number, 0 to go back): ")) - 1
         except Exception:
             print("Invalid input.")
             return
@@ -454,7 +465,7 @@ class CLI:
             print("1. Reschedule")
             print("2. Cancel / Request Refund")
             print("0. Back")
-            choice = input("Choice: ").strip()
+            choice = input("Select (number, 0 to go back): ").strip()
             if choice == '0':
                 return
             elif choice == '1':

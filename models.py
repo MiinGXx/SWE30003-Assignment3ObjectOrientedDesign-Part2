@@ -58,7 +58,7 @@ class Park:
     `add_park` factory method.
     """
 
-    def __init__(self, park_id, name, location, description, schedules=None, max_capacity=0, _id=None):
+    def __init__(self, park_id, name, location, description, schedules=None, max_capacity=0, ticket_price=None, _id=None):
         # Accept optional MongoDB `_id` when reconstructing from DB dicts
         self._id = _id
         self.park_id = park_id
@@ -67,6 +67,8 @@ class Park:
         self.description = description
         # park-level maximum capacity (applies to all schedules unless otherwise handled)
         self.max_capacity = max_capacity or 0
+        # per-park ticket price (set by DB or admin). Keep None if not provided.
+        self.ticket_price = ticket_price
         # schedules is a list of Schedule Objects
         self.schedules = [Schedule(**s) if isinstance(s, dict) else s for s in (schedules or [])]
 
@@ -85,6 +87,7 @@ class Park:
         return {
             "park_id": self.park_id, "name": self.name, "location": self.location,
             "description": self.description, "max_capacity": self.max_capacity,
+            "ticket_price": self.ticket_price,
             "schedules": [s.to_dict() for s in self.schedules]
         }
 
@@ -143,7 +146,7 @@ class Park:
             raise
 
     @classmethod
-    def add_park(cls, name, location, description, schedules=None, max_capacity=0):
+    def add_park(cls, name, location, description, schedules=None, max_capacity=0, ticket_price=None):
         """Create a new Park with generated park_id, attach schedules and persist.
 
         `schedules` may be a list of Schedule objects or list of dicts with keys visit_date/max_capacity.
@@ -172,7 +175,7 @@ class Park:
                 except Exception:
                     raise ValueError("Invalid schedule format")
 
-        p = cls(park_id, name, location, description, schedules=sched_objs, max_capacity=max_capacity)
+        p = cls(park_id, name, location, description, schedules=sched_objs, max_capacity=max_capacity, ticket_price=ticket_price)
         p.save()
         return p
 
