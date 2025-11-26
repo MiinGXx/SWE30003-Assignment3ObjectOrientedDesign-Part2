@@ -174,11 +174,10 @@ class CLI:
         
     # ==========================
 
-# Helper to reconstruct Merch objects from DB Dicts
+# Helper to reconstruct a Merchandise-like object from a DB dict for display
 def from_merch_dict(d):
     return AdminConsole_Merch_Helper(d['sku'], d['name'], d['price'], d['stock_quantity'])
 
-# Small workaround class to reuse Merchandise logic in main without circular imports or strict typing issues
 from models import Merchandise as AdminConsole_Merch_Helper
 
 if __name__ == "__main__":

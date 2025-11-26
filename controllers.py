@@ -1,11 +1,10 @@
 """
-CustomerConsole: a small facade/controller for customer menu flows.
+Controllers for interactive console flows.
 
-This file provides `CustomerConsole` which mirrors `AdminConsole`'s shape
-and exposes a `run(customer)` method. To avoid a large code move and keep
-behavior identical, the console delegates to methods on the CLI instance
-passed into it (so existing `flow_*` implementations in `main.py` can
-remain unchanged).
+This module provides `CustomerConsole` and `AdminConsole`, each exposing
+`run(user)` for their respective authenticated sessions. Controllers
+handle user interaction and delegate domain operations to models and
+services.
 """
 from datetime import datetime
 from services import AuditLog, AuthenticationManager, RefundRequest
@@ -14,26 +13,12 @@ from models import SupportTicket, Park, Schedule, Merchandise, Order, Customer, 
 class CustomerConsole:
     """Facade for Customer interactive flows — mirrors AdminConsole style.
 
-    This implementation delegates to the provided `cli` instance for the
-    concrete flow implementations. The goal is to provide a single
-    encapsulated entrypoint for customer interactions (for testability
-    and modularity), while keeping code changes small.
+    Delegates to the provided `cli` instance for concrete flow
+    implementations. The console provides a single, encapsulated
+    entrypoint for customer interactions, focused on testability and
+    modularity. It calls into domain models and services to perform
+    persistent operations.
     """
-
-    def __init__(self, cli, auth=None, audit_log=None, admin_console=None):
-        self.cli = cli
-        self.auth = auth
-        self.audit = audit_log
-        self.admin_console = admin_console
-        self._menu_actions = {
-            '1': lambda customer: self.buy_tickets(customer),
-            '2': lambda customer: self.buy_merch(customer),
-            '3': lambda customer: self.checkout(customer),
-            '4': lambda customer: self.account(customer),
-            '5': self.contact_support,
-            '6': self.logout
-        }
-        self._running = True
 
     def run(self, customer):
         """Main loop for an authenticated customer session.
@@ -554,18 +539,18 @@ class CustomerConsole:
 
 
 class AdminConsole:
-    """Facade for Admin Operations (moved from services.py).
+    """Admin console for interactive administrator flows.
 
-    This mirrors the previous AdminConsole implementation and keeps all
-    interactive admin flows together in `controllers.py` alongside the
-    `CustomerConsole` for consistency.
+    Provides management menus for parks, merchandise, reporting,
+    audit logs and support ticket resolution. Delegates domain work
+    to models and services.
     """
 
     def run(self, admin_user):
         """Main loop for an authenticated admin session.
 
-        Presents the top-level admin menu and dispatches to the
-        existing admin helpers (manage_park, manage_inventory, etc.).
+        Presents the top-level admin menu and dispatches to admin helpers
+        such as `manage_park`, `manage_inventory`, and reporting utilities.
         """
         # Use AuthenticationManager singleton for logout and auditing context
         try:
