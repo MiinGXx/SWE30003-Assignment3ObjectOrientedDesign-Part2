@@ -319,7 +319,7 @@ class Order:
         self.total_cost = total_cost
         self.date = datetime.now()
         self.payment_status = "PAID"
-    
+
     def to_dict(self):
         return {
             "order_id": self.order_id,
@@ -391,8 +391,15 @@ class Customer(User):
     synchronize the persisted cart state.
     """
 
-    def __init__(self, user_id, name, email, password):
+    def __init__(self, user_id, name, email, password, age_group=None, gender=None, region=None, visitor_type=None, marketing_opt_in=False):
         super().__init__(user_id, name, email, password)
+        # Demographic/profile fields
+        self.age_group = age_group
+        self.gender = gender
+        self.region = region
+        self.visitor_type = visitor_type
+        self.marketing_opt_in = bool(marketing_opt_in)
+
         self.cart = Cart()
         self.tickets = [] # In-memory list of current session tickets
         # Load persisted cart (if any)
@@ -493,6 +500,17 @@ class Customer(User):
                 d['metadata'] = meta
             out.append(d)
         return out
+
+    def to_dict(self):
+        base = super().to_dict()
+        base.update({
+            'age_group': self.age_group,
+            'gender': self.gender,
+            'region': self.region,
+            'visitor_type': self.visitor_type,
+            'marketing_opt_in': bool(self.marketing_opt_in)
+        })
+        return base
 
 class Admin(User):
     def get_role(self):

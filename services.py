@@ -121,7 +121,15 @@ class AuthenticationManager:
             if data['role'] == 'Admin':
                 user = Admin(data['user_id'], data['name'], data['email'], data['password'])
             else:
-                user = Customer(data['user_id'], data['name'], data['email'], data['password'])
+                # Pass demographic/profile fields into Customer if present
+                user = Customer(
+                    data['user_id'], data['name'], data['email'], data['password'],
+                    age_group=data.get('age_group'),
+                    gender=data.get('gender'),
+                    region=data.get('region'),
+                    visitor_type=data.get('visitor_type'),
+                    marketing_opt_in=data.get('marketing_opt_in', False)
+                )
             
             self.current_user = user
             AuditLog.log(user.name, "USER", "Logged In")
@@ -671,11 +679,154 @@ class AdminConsole:
             print("Invalid choice.")
 
     def view_reports(self):
-        orders = Database.get_all_orders()
-        total_rev = sum(o['total_cost'] for o in orders)
-        print("\n--- ANALYTICS REPORT ---")
-        print(f"Total Revenue: ${total_rev:.2f}")
-        print(f"Total Orders: {len(orders)}")
+        # Interactive reports menu with multiple breakdowns
+        while True:
+            print("\n--- ANALYTICS REPORT ---")
+            print("1. Summary (total revenue & orders)")
+            print("2. Breakdown by Park (tickets)")
+            print("3. Breakdown by Date Range")
+            print("4. Breakdown by Payment Status")
+            print("5. Breakdown by Merchandise Orders")
+            print("6. Revenue by Region (customer snapshot)")
+            print("7. Visitor Counts by Age Group (unique visitors & orders)")
+            print("0. Back")
+            choice = input("Select (number, 0 to go back): ").strip()
+            if choice == '0' or choice == '':
+                return
+
+            orders = Database.get_all_orders()
+
+            if choice == '1':
+                total_rev = sum((o.get('total_cost') or 0) for o in orders)
+                print("\n-- Summary --")
+                print(f"Total Revenue: ${total_rev:.2f}")
+                print(f"Total Orders: {len(orders)}")
+
+            elif choice == '2':
+                # Sum ticket revenue and counts by park (use line_items metadata)
+                park_stats = {}
+                for o in orders:
+                    for li in o.get('line_items', []):
+                        if li.get('item_type') == 'TICKET':
+                            meta = li.get('metadata') or {}
+                            park = meta.get('park_name') or meta.get('park_id') or li.get('item_name') or 'UNKNOWN'
+                            rev = (li.get('unit_price') or 0) * (li.get('quantity') or 1)
+                            stats = park_stats.setdefault(park, {'revenue': 0.0, 'tickets': 0})
+                            stats['revenue'] += rev
+                            stats['tickets'] += (li.get('quantity') or 1)
+                if not park_stats:
+                    print("\nNo ticket sales found in orders.")
+                else:
+                    print("\n-- Revenue by Park (tickets) --")
+                    for park, s in sorted(park_stats.items(), key=lambda kv: kv[1]['revenue'], reverse=True):
+                        print(f"{park}: ${s['revenue']:.2f} across {s['tickets']} ticket(s)")
+
+            elif choice == '3':
+                # Date range filter (orders have 'date' as datetime)
+                try:
+                    start_in = input("Start date (YYYY-MM-DD): ").strip()
+                    end_in = input("End date (YYYY-MM-DD): ").strip()
+                    start_dt = datetime.strptime(start_in, "%Y-%m-%d")
+                    end_dt = datetime.strptime(end_in, "%Y-%m-%d")
+                except Exception:
+                    print("Invalid date format. Use YYYY-MM-DD.")
+                    continue
+                # normalize end to end of day
+                end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                total_rev = 0.0
+                count = 0
+                for o in orders:
+                    od = o.get('date')
+                    if od is None:
+                        continue
+                    try:
+                        # if stored as string, try parse
+                        if isinstance(od, str):
+                            odt = datetime.fromisoformat(od)
+                        else:
+                            odt = od
+                    except Exception:
+                        continue
+                    if start_dt <= odt <= end_dt:
+                        total_rev += (o.get('total_cost') or 0)
+                        count += 1
+                print(f"\nOrders between {start_in} and {end_in}: {count}")
+                print(f"Revenue in range: ${total_rev:.2f}")
+
+            elif choice == '4':
+                # Group by payment_status
+                status_stats = {}
+                for o in orders:
+                    status = o.get('payment_status', 'UNKNOWN')
+                    s = status_stats.setdefault(status, {'revenue': 0.0, 'orders': 0})
+                    s['revenue'] += (o.get('total_cost') or 0)
+                    s['orders'] += 1
+                print("\n-- By Payment Status --")
+                for st, s in status_stats.items():
+                    print(f"{st}: {s['orders']} order(s), Revenue: ${s['revenue']:.2f}")
+
+            elif choice == '5':
+                # Aggregate merchandise sales across orders (by SKU or item name)
+                merch_stats = {}
+                for o in orders:
+                    for li in o.get('line_items', []):
+                        if li.get('item_type') == 'MERCH':
+                            meta = li.get('metadata') or {}
+                            key = meta.get('sku') or li.get('item_name') or 'UNKNOWN'
+                            qty = int(li.get('quantity') or 1)
+                            rev = (li.get('unit_price') or 0) * qty
+                            entry = merch_stats.setdefault(key, {'name': li.get('item_name'), 'revenue': 0.0, 'quantity': 0})
+                            entry['revenue'] += rev
+                            entry['quantity'] += qty
+                if not merch_stats:
+                    print("\nNo merchandise sales found in orders.")
+                else:
+                    print("\n-- Merchandise Sales --")
+                    for sku, s in sorted(merch_stats.items(), key=lambda kv: kv[1]['revenue'], reverse=True):
+                        name = s.get('name') or sku
+                        print(f"{name} (SKU: {sku}): {s['quantity']} unit(s) sold, Revenue: ${s['revenue']:.2f}")
+
+            elif choice == '6':
+                # Revenue aggregated by customer region (lookup current user profile)
+                region_stats = {}
+                for o in orders:
+                    uid = o.get('user_id')
+                    user = Database.get_user_by_id(uid) or {}
+                    region = user.get('region') or 'UNKNOWN'
+                    s = region_stats.setdefault(region, {'revenue': 0.0, 'orders': 0})
+                    s['revenue'] += (o.get('total_cost') or 0)
+                    s['orders'] += 1
+                if not region_stats:
+                    print("\nNo customer region data available in user profiles.")
+                else:
+                    print("\n-- Revenue by Region --")
+                    for r, s in sorted(region_stats.items(), key=lambda kv: kv[1]['revenue'], reverse=True):
+                        print(f"{r}: {s['orders']} order(s), Revenue: ${s['revenue']:.2f}")
+
+            elif choice == '7':
+                # Visitor counts by age group: count unique users and orders per age bucket (lookup current profiles)
+                orders_by_age = {}
+                unique_users_by_age = {}
+                for o in orders:
+                    uid = o.get('user_id')
+                    user = Database.get_user_by_id(uid) or {}
+                    age = user.get('age_group') or 'UNKNOWN'
+                    orders_by_age[age] = orders_by_age.get(age, 0) + 1
+                    if age not in unique_users_by_age:
+                        unique_users_by_age[age] = set()
+                    if uid:
+                        unique_users_by_age[age].add(uid)
+                if not orders_by_age:
+                    print("\nNo age-group data available in user profiles.")
+                else:
+                    print("\n-- Visitor Counts by Age Group --")
+                    for age in sorted(orders_by_age.keys()):
+                        orders_count = orders_by_age.get(age, 0)
+                        unique_count = len(unique_users_by_age.get(age, set()))
+                        print(f"{age}: {unique_count} unique visitor(s), {orders_count} order(s)")
+
+            else:
+                print("Invalid selection.")
 
     def view_audit_logs(self):
         logs = AuditLog.get_logs()

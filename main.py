@@ -64,6 +64,78 @@ class CLI:
         email = input("Email: ")
         pw = input("Password: ")
         if self.auth.register_customer(name, email, pw):
+            # Offer optional demographic/profile capture
+            do_demo = input("Would you like to fill optional demographics now? (y/n): ").strip().lower()
+            if do_demo == 'y':
+                # Age group selection from predefined buckets
+                age_groups = ["<18", "18-24", "25-34", "35-44", "45-54", "55+"]
+                print("\nSelect Age Group:")
+                for i, ag in enumerate(age_groups, start=1):
+                    print(f"{i}. {ag}")
+                print("0. Skip")
+                age = ''
+                while True:
+                    sel = input("Select age group (number, 0 to skip): ").strip()
+                    if sel == '' or sel == '0':
+                        break
+                    try:
+                        idx = int(sel) - 1
+                        if 0 <= idx < len(age_groups):
+                            age = age_groups[idx]
+                            break
+                    except Exception:
+                        pass
+                    print("Invalid selection. Choose a number from the list or 0 to skip.")
+
+                # Gender: only allow Male or Female (case-insensitive)
+                gender = ''
+                while True:
+                    g = input("Gender (Male/Female) (or press Enter to skip): ").strip()
+                    if g == '':
+                        break
+                    if g.lower() in ('male', 'female'):
+                        gender = 'Male' if g.lower() == 'male' else 'Female'
+                        break
+                    print("Please enter only 'Male' or 'Female', or press Enter to skip.")
+
+                # Region / City: free text (optional)
+                region = input("Region / City (or press Enter to skip): ").strip()
+
+                # Visitor type: only allow local/domestic/tourist
+                vtype = ''
+                while True:
+                    vt = input("Visitor type (local/domestic/tourist) (or press Enter to skip): ").strip().lower()
+                    if vt == '':
+                        break
+                    if vt in ('local', 'domestic', 'tourist'):
+                        vtype = vt
+                        break
+                    print("Invalid input. Enter one of: local, domestic, tourist (or press Enter to skip).")
+
+                # Explain marketing opt-in for first-time users
+                print("\nMarketing opt-in allows us to email you promotional offers, park updates, and event notifications. You can change this later in My Account.")
+                opt_bool = False
+                while True:
+                    opt = input("Marketing opt-in? (y/n): ").strip().lower()
+                    if opt in ('y', 'n'):
+                        opt_bool = True if opt == 'y' else False
+                        break
+                    print("Please enter 'y' or 'n'.")
+
+                # Find the newly created user and persist demographics
+                try:
+                    u = Database.get_user(email)
+                    if u:
+                        profile = {}
+                        if age: profile['age_group'] = age
+                        if gender: profile['gender'] = gender
+                        if region: profile['region'] = region
+                        if vtype: profile['visitor_type'] = vtype
+                        profile['marketing_opt_in'] = opt_bool
+                        Database.update_user_profile(u.get('user_id'), profile)
+                        print("Demographics saved.")
+                except Exception:
+                    print("Failed to save demographics. You can update them later in My Account.")
             print("Success! Please login.")
         else:
             print("Email already exists.")
@@ -344,7 +416,7 @@ class CLI:
                     item_dict['metadata'] = {"date": visit_date, "ticket_ids": ticket_ids}
                     final_line_items.append(item_dict)
 
-            # Save Order
+            # Save Order (store order referencing user_id; demographics are read live from users collection)
             order = Order(customer.user_id, final_line_items, total)
             Database.add_order(order.to_dict())
             AuditLog.log(customer.name, "ORDER", f"Placed order ${total}")
@@ -358,14 +430,121 @@ class CLI:
         print("\n--- My Account ---")
         print("1. Manage Bookings")
         print("2. View Tickets")
+        print("3. Edit Demographics / Profile")
         print("0. Back")
         choice = input("Select (number, 0 to go back): ").strip()
         if choice == '1':
             self.manage_bookings(customer)
         elif choice == '2':
             self.view_tickets(customer)
+        elif choice == '3':
+            self.edit_demographics(customer)
         else:
             return
+
+    def edit_demographics(self, customer: Customer):
+        """Allow a customer to view and edit their demographic/profile fields."""
+        print("\n--- Edit Demographics ---")
+        print("Press Enter to keep current value.")
+        cur_age = getattr(customer, 'age_group', None) or ''
+        cur_gender = getattr(customer, 'gender', None) or ''
+        cur_region = getattr(customer, 'region', None) or ''
+        cur_type = getattr(customer, 'visitor_type', None) or ''
+        cur_opt = getattr(customer, 'marketing_opt_in', False)
+
+        # Age group: choose from same predefined buckets as registration
+        age_groups = ["<18", "18-24", "25-34", "35-44", "45-54", "55+"]
+        print("\nSelect Age Group (press Enter to keep current):")
+        for i, ag in enumerate(age_groups, start=1):
+            marker = " (current)" if ag == cur_age else ""
+            print(f"{i}. {ag}{marker}")
+        print("0. Keep current / Skip")
+        age = cur_age
+        while True:
+            sel = input("Select age group (number, 0 to keep current): ").strip()
+            if sel == '':
+                age = cur_age
+                break
+            if sel == '0':
+                age = cur_age
+                break
+            try:
+                idx = int(sel) - 1
+                if 0 <= idx < len(age_groups):
+                    age = age_groups[idx]
+                    break
+            except Exception:
+                pass
+            print("Invalid selection. Choose a number from the list or 0 to keep current.")
+
+        # Gender: only allow Male or Female
+        gender = cur_gender
+        while True:
+            g = input(f"Gender (Male/Female) (current: {cur_gender}) (press Enter to keep current): ").strip()
+            if g == '':
+                gender = cur_gender
+                break
+            if g.lower() in ('male', 'female'):
+                gender = 'Male' if g.lower() == 'male' else 'Female'
+                break
+            print("Please enter only 'Male' or 'Female', or press Enter to keep current.")
+
+        # Region / City: free text (press Enter to keep current)
+        region = input(f"Region (current: {cur_region}) (press Enter to keep current): ").strip()
+        if region == '':
+            region = cur_region
+
+        # Visitor type: only allow local/domestic/tourist
+        vtype = cur_type
+        while True:
+            vt = input(f"Visitor type (local/domestic/tourist) (current: {cur_type}) (press Enter to keep current): ").strip().lower()
+            if vt == '':
+                vtype = cur_type
+                break
+            if vt in ('local', 'domestic', 'tourist'):
+                vtype = vt
+                break
+            print("Invalid input. Enter one of: local, domestic, tourist (or press Enter to keep current).")
+
+        # Marketing opt-in: explain and require y/n (or Enter to keep current)
+        print("\nMarketing opt-in allows us to email you promotional offers, park updates, and event notifications. You can change this later in My Account.")
+        opt_in = None
+        while True:
+            ans = input(f"Marketing opt-in? (y/n) (current: {'y' if cur_opt else 'n'}) (press Enter to keep current): ").strip().lower()
+            if ans == '':
+                opt_in = cur_opt
+                break
+            if ans in ('y', 'n'):
+                opt_in = True if ans == 'y' else False
+                break
+            print("Please enter 'y' or 'n', or press Enter to keep current.")
+
+        # Apply changes only for fields that actually changed
+        profile_update = {}
+        if age != cur_age and age != '':
+            customer.age_group = age
+            profile_update['age_group'] = age
+        if gender != cur_gender and gender != '':
+            customer.gender = gender
+            profile_update['gender'] = gender
+        if region != cur_region and region != '':
+            customer.region = region
+            profile_update['region'] = region
+        if vtype != cur_type and vtype != '':
+            customer.visitor_type = vtype
+            profile_update['visitor_type'] = vtype
+        if opt_in is not None and opt_in != cur_opt:
+            customer.marketing_opt_in = bool(opt_in)
+            profile_update['marketing_opt_in'] = bool(opt_in)
+
+        if profile_update:
+            try:
+                Database.update_user_profile(customer.user_id, profile_update)
+                print("Profile updated.")
+            except Exception as e:
+                print(f"Failed to update profile: {e}")
+        else:
+            print("No changes made.")
 
     def view_tickets(self, customer: Customer):
         """List all tickets for the customer and display details + QR code in terminal."""

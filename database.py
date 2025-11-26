@@ -8,7 +8,7 @@ domain code should call these methods to avoid scattering raw
 """
 
 import pymongo
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 # Configuration
@@ -38,8 +38,20 @@ class Database:
         return Database.users_col.find_one({"email": email})
 
     @staticmethod
+    def get_user_by_id(user_id):
+        """Retrieve a user document by its `user_id` field."""
+        if not user_id:
+            return None
+        return Database.users_col.find_one({"user_id": user_id})
+
+    @staticmethod
     def add_user(user_obj):
         Database.users_col.insert_one(user_obj.to_dict())
+
+    @staticmethod
+    def update_user_profile(user_id, profile_fields: dict):
+        """Update top-level profile/demographic fields for a user by user_id."""
+        Database.users_col.update_one({'user_id': user_id}, {'$set': profile_fields})
 
     @staticmethod
     def get_all_parks():
@@ -187,8 +199,13 @@ class Database:
             # 1. Users
             users = [
                 {"user_id": "admin01", "name": "Super Admin", "email": "admin", "password": "admin123", "role": "Admin"},
-                {"user_id": "cust01", "name": "John Doe", "email": "john", "password": "123", "role": "Customer"},
-                {"user_id": "cust02", "name": "Jane Smith", "email": "jane", "password": "123", "role": "Customer"}
+                {"user_id": "cust01", "name": "John Doe", "email": "john", "password": "123", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Sarawak", "visitor_type": "local", "marketing_opt_in": True},
+                {"user_id": "cust02", "name": "Jane Smith", "email": "jane", "password": "123", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Sarawak", "visitor_type": "domestic", "marketing_opt_in": False},
+                {"user_id": "cust03", "name": "Alice Park", "email": "alice", "password": "pw3", "role": "Customer", "age_group": "18-24", "gender": "Female", "region": "Miri", "visitor_type": "tourist", "marketing_opt_in": True},
+                {"user_id": "cust04", "name": "Bob Rivers", "email": "bob", "password": "pw4", "role": "Customer", "age_group": "45-54", "gender": "Male", "region": "Miri", "visitor_type": "local", "marketing_opt_in": False},
+                {"user_id": "cust05", "name": "Carol Lake", "email": "carol", "password": "pw5", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Kuching", "visitor_type": "domestic", "marketing_opt_in": True},
+                {"user_id": "cust06", "name": "Dave Hill", "email": "dave", "password": "pw6", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Kuching", "visitor_type": "local", "marketing_opt_in": False},
+                {"user_id": "cust07", "name": "Eve Forrest", "email": "eve", "password": "pw7", "role": "Customer", "age_group": "55+", "gender": "Female", "region": "Labuan", "visitor_type": "tourist", "marketing_opt_in": False}
             ]
             Database.users_col.insert_many(users)
 
@@ -217,7 +234,106 @@ class Database:
             # 3. Merchandise
             merch = [
                 {"sku": "SKU001", "name": "Park T-Shirt", "price": 25.00, "stock_quantity": 100},
-                {"sku": "SKU002", "name": "Souvenir Mug", "price": 15.00, "stock_quantity": 50}
+                {"sku": "SKU002", "name": "Souvenir Mug", "price": 15.00, "stock_quantity": 50},
+                {"sku": "SKU003", "name": "Windbreaker Jacket", "price": 55.00, "stock_quantity": 40},
+                {"sku": "SKU004", "name": "Hiking Cap", "price": 12.00, "stock_quantity": 200},
+                {"sku": "SKU005", "name": "Camping Mug", "price": 18.00, "stock_quantity": 80},
+                {"sku": "SKU006", "name": "Trail Map (Folded)", "price": 5.00, "stock_quantity": 150},
+                {"sku": "SKU007", "name": "Sticker Pack", "price": 4.00, "stock_quantity": 500},
+                {"sku": "SKU008", "name": "Outdoor Blanket", "price": 45.00, "stock_quantity": 30},
+                {"sku": "SKU009", "name": "Water Bottle", "price": 20.00, "stock_quantity": 120},
+                {"sku": "SKU010", "name": "Binoculars (Compact)", "price": 75.00, "stock_quantity": 15}
             ]
             Database.merch_col.insert_many(merch)
+
+            # 4. Sample reservations (tickets) and orders for analytics demo
+            # Create several ticket reservations across parks/dates for different users
+            reservations = []
+            # use fixed dates matching seeded schedules
+            reservations.append({
+                "ticket_id": str(uuid.uuid4())[:8], "owner_id": "cust01", "park_id": "P01", "park_name": "Bako National Park",
+                "visit_date": "2025-12-01", "status": "CONFIRMED", "qr_code": "QR-" + str(uuid.uuid4())[:8], "price": 10.00, "created_at": datetime(2025, 11, 20, 13, 0, 0, tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+            })
+            reservations.append({
+                "ticket_id": str(uuid.uuid4())[:8], "owner_id": "cust02", "park_id": "P01", "park_name": "Bako National Park",
+                "visit_date": "2025-12-02", "status": "CONFIRMED", "qr_code": "QR-" + str(uuid.uuid4())[:8], "price": 10.00, "created_at": datetime(2025, 11, 22, 10, 30, 0, tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+            })
+            reservations.append({
+                "ticket_id": str(uuid.uuid4())[:8], "owner_id": "cust03", "park_id": "P02", "park_name": "Niah National Park",
+                "visit_date": "2025-12-01", "status": "CONFIRMED", "qr_code": "QR-" + str(uuid.uuid4())[:8], "price": 15.00, "created_at": datetime(2025, 11, 23, 9, 15, 0, tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+            })
+            reservations.append({
+                "ticket_id": str(uuid.uuid4())[:8], "owner_id": "cust04", "park_id": "P02", "park_name": "Niah National Park",
+                "visit_date": "2025-12-01", "status": "CONFIRMED", "qr_code": "QR-" + str(uuid.uuid4())[:8], "price": 15.00, "created_at": datetime(2025, 11, 24, 14, 45, 0, tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+            })
+            reservations.append({
+                "ticket_id": str(uuid.uuid4())[:8], "owner_id": "cust05", "park_id": "P01", "park_name": "Bako National Park",
+                "visit_date": "2025-12-01", "status": "CONFIRMED", "qr_code": "QR-" + str(uuid.uuid4())[:8], "price": 10.00, "created_at": datetime(2025, 11, 25, 8, 0, 0, tzinfo=timezone.utc).isoformat(timespec='milliseconds')
+            })
+            Database.reservations_col.insert_many(reservations)
+
+            # Sample orders combining tickets and merchandise
+            orders = []
+            # Order 1: cust01 buys 1 ticket and a T-Shirt
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust01",
+                "line_items": [
+                    {"item_type": "TICKET", "item_name": "Bako National Park", "quantity": 1, "unit_price": 10.00, "metadata": {"park_name": "Bako National Park", "park_id": "P01", "date": "2025-12-01"}},
+                    {"item_type": "MERCH", "item_name": "Park T-Shirt", "quantity": 1, "unit_price": 25.00, "metadata": {"sku": "SKU001"}}
+                ],
+                "total_cost": 35.00, "date": datetime(2025,11,20,13,51,2,739000, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 2: cust02 buys 2 mugs
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust02",
+                "line_items": [
+                    {"item_type": "MERCH", "item_name": "Souvenir Mug", "quantity": 2, "unit_price": 15.00, "metadata": {"sku": "SKU002"}}
+                ],
+                "total_cost": 30.00, "date": datetime(2025,11,22,11,20,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 3: cust03 ticket + blanket
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust03",
+                "line_items": [
+                    {"item_type": "TICKET", "item_name": "Niah National Park", "quantity": 1, "unit_price": 15.00, "metadata": {"park_name": "Niah National Park", "park_id": "P02", "date": "2025-12-01"}},
+                    {"item_type": "MERCH", "item_name": "Outdoor Blanket", "quantity": 1, "unit_price": 45.00, "metadata": {"sku": "SKU008"}}
+                ],
+                "total_cost": 60.00, "date": datetime(2025,11,23,9,0,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 4: cust04 buys binoculars
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust04",
+                "line_items": [
+                    {"item_type": "MERCH", "item_name": "Binoculars (Compact)", "quantity": 1, "unit_price": 75.00, "metadata": {"sku": "SKU010"}}
+                ],
+                "total_cost": 75.00, "date": datetime(2025,11,24,15,30,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 5: cust05 buys ticket + water bottle
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust05",
+                "line_items": [
+                    {"item_type": "TICKET", "item_name": "Bako National Park", "quantity": 1, "unit_price": 10.00, "metadata": {"park_name": "Bako National Park", "park_id": "P01", "date": "2025-12-01"}},
+                    {"item_type": "MERCH", "item_name": "Water Bottle", "quantity": 1, "unit_price": 20.00, "metadata": {"sku": "SKU009"}}
+                ],
+                "total_cost": 30.00, "date": datetime(2025,11,25,8,30,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 6: cust06 mixed order (two merch)
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust06",
+                "line_items": [
+                    {"item_type": "MERCH", "item_name": "Hiking Cap", "quantity": 2, "unit_price": 12.00, "metadata": {"sku": "SKU004"}},
+                    {"item_type": "MERCH", "item_name": "Trail Map (Folded)", "quantity": 3, "unit_price": 5.00, "metadata": {"sku": "SKU006"}}
+                ],
+                "total_cost": 39.00, "date": datetime(2025,11,26,12,0,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+            # Order 7: cust07 ticket only
+            orders.append({
+                "order_id": str(uuid.uuid4())[:8], "user_id": "cust07",
+                "line_items": [
+                    {"item_type": "TICKET", "item_name": "Niah National Park", "quantity": 2, "unit_price": 15.00, "metadata": {"park_name": "Niah National Park", "park_id": "P02", "date": "2025-12-01"}}
+                ],
+                "total_cost": 30.00, "date": datetime(2025,11,24,16,10,0,0, tzinfo=timezone.utc).isoformat(timespec='milliseconds'), "payment_status": "PAID"
+            })
+
+            Database.orders_col.insert_many(orders)
             print("--- Seeding Complete ---")
