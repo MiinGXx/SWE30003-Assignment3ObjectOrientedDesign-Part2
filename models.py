@@ -477,7 +477,18 @@ class SupportTicket:
     @classmethod
     def get_open(cls):
         try:
-            return list(Database.tickets_col.find({'status': 'OPEN'}))
+            docs = list(Database.tickets_col.find({'status': 'OPEN'}))
+            cleaned = []
+            for d in docs:
+                # make a shallow copy and remove MongoDB internal _id
+                cd = dict(d)
+                if '_id' in cd:
+                    # ensure there is an `id` field for compatibility
+                    if 'id' not in cd:
+                        cd['id'] = str(cd['_id'])
+                    cd.pop('_id', None)
+                cleaned.append(cd)
+            return cleaned
         except Exception:
             return []
 
