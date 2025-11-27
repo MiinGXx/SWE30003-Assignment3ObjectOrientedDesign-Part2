@@ -259,7 +259,7 @@ class Merchandise:
             raise
 
     def __str__(self):
-        return f"{self.name} (${self.price}) - Stock: {self.stock_quantity}"
+        return f"{self.name} (${self.price:.2f}) - Stock: {self.stock_quantity}"
 
     @classmethod
     def load_by_sku(cls, sku):

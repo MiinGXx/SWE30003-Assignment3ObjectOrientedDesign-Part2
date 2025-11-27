@@ -11,6 +11,7 @@ persistence live in their respective modules.
 """
 
 import sys
+import getpass
 from database import Database
 from models import Customer, Admin
 from services import AuthenticationManager, AuditLog
@@ -63,7 +64,7 @@ class CLI:
         print("\n--- Register ---")
         name = input("Name: ")
         email = input("Email: ")
-        pw = input("Password: ")
+        pw = getpass.getpass("Password: ")
         if self.auth.register_customer(name, email, pw):
             # Offer optional demographic/profile capture
             do_demo = input("Would you like to fill optional demographics now? (y/n): ").strip().lower()
@@ -148,7 +149,7 @@ class CLI:
         """
         print("\n--- Login ---")
         email = input("Email: ")
-        pw = input("Password: ")
+        pw = getpass.getpass("Password: ")
         user = self.auth.login(email, pw)
 
         if user:
