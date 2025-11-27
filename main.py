@@ -17,7 +17,7 @@ from services import AuthenticationManager, AuditLog
 from controllers import CustomerConsole, AdminConsole
 
 # Initialize DB (Seed if empty)
-Database.seed_data()
+Database.seed_data()    
 
 class CLI:
     """Interactive command-line interface controller.
@@ -32,7 +32,7 @@ class CLI:
         # Admin console facade used for admin operations
         self.admin_console = AdminConsole()
         # Customer console facade (delegates to existing CLI flow implementations)
-        self.customer_console = CustomerConsole(self, auth=self.auth, audit_log=AuditLog(), admin_console=self.admin_console)
+        self.customer_console = CustomerConsole()
 
     def main_menu(self):
         """Show the top-level menu and route to login/register or exit.

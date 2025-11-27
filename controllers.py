@@ -23,9 +23,18 @@ class CustomerConsole:
     def run(self, customer):
         """Main loop for an authenticated customer session.
 
-        Keeps the same menu text as before to preserve UX. Delegates
-        actual work to `cli` flows so we don't duplicate large code blocks.
+        Presents the customer menu, dispatches to handlers and delegates
+        domain operations to models and services.
         """
+        menu_actions = {
+            '1': lambda customer: self.buy_tickets(customer),
+            '2': lambda customer: self.buy_merch(customer),
+            '3': lambda customer: self.checkout(customer),
+            '4': lambda customer: self.account(customer),
+            '5': self.contact_support,
+            '6': self.logout
+        }
+
         self._running = True
         while self._running:
             print("\n--- Customer Menu ---")
@@ -36,7 +45,7 @@ class CustomerConsole:
             print("5. Contact Support")
             print("6. Logout")
             choice = input("Choice: ")
-            action = self._menu_actions.get(choice)
+            action = menu_actions.get(choice)
             if action:
                 # action may be a bound function that expects customer
                 # or one that handles it itself (contact_support/logout)
@@ -61,11 +70,14 @@ class CustomerConsole:
             print("Failed to submit ticket. Try again later.")
 
     def logout(self, customer):
-        if self.auth:
-            try:
-                self.auth.logout()
-            except Exception:
-                pass
+        try:
+            from services import AuthenticationManager as _AuthCls
+        except Exception:
+            _AuthCls = AuthenticationManager
+        try:
+            _AuthCls().logout()
+        except Exception:
+            pass
         self._running = False
 
     def buy_tickets(self, customer):
