@@ -198,14 +198,14 @@ class Database:
             
             # 1. Users
             users = [
-                {"user_id": "admin01", "name": "Super Admin", "email": "admin", "password": "admin123", "role": "Admin"},
-                {"user_id": "cust01", "name": "John Doe", "email": "john", "password": "123", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Sarawak", "visitor_type": "local", "marketing_opt_in": True},
-                {"user_id": "cust02", "name": "Jane Smith", "email": "jane", "password": "123", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Sarawak", "visitor_type": "domestic", "marketing_opt_in": False},
-                {"user_id": "cust03", "name": "Alice Park", "email": "alice", "password": "pw3", "role": "Customer", "age_group": "18-24", "gender": "Female", "region": "Miri", "visitor_type": "tourist", "marketing_opt_in": True},
-                {"user_id": "cust04", "name": "Bob Rivers", "email": "bob", "password": "pw4", "role": "Customer", "age_group": "45-54", "gender": "Male", "region": "Miri", "visitor_type": "local", "marketing_opt_in": False},
-                {"user_id": "cust05", "name": "Carol Lake", "email": "carol", "password": "pw5", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Kuching", "visitor_type": "domestic", "marketing_opt_in": True},
-                {"user_id": "cust06", "name": "Dave Hill", "email": "dave", "password": "pw6", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Kuching", "visitor_type": "local", "marketing_opt_in": False},
-                {"user_id": "cust07", "name": "Eve Forrest", "email": "eve", "password": "pw7", "role": "Customer", "age_group": "55+", "gender": "Female", "region": "Labuan", "visitor_type": "tourist", "marketing_opt_in": False}
+                {"user_id": "admin01", "name": "Super Admin", "email": "admin@example.com", "password": "admin123", "role": "Admin"},
+                {"user_id": "cust01", "name": "John Doe", "email": "john.doe@example.com", "password": "123", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Sarawak", "visitor_type": "local", "marketing_opt_in": True},
+                {"user_id": "cust02", "name": "Jane Smith", "email": "jane.smith@example.com", "password": "123", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Sarawak", "visitor_type": "domestic", "marketing_opt_in": False},
+                {"user_id": "cust03", "name": "Alice Park", "email": "alice.park@example.com", "password": "pw3", "role": "Customer", "age_group": "18-24", "gender": "Female", "region": "Miri", "visitor_type": "tourist", "marketing_opt_in": True},
+                {"user_id": "cust04", "name": "Bob Rivers", "email": "bob.rivers@example.com", "password": "pw4", "role": "Customer", "age_group": "45-54", "gender": "Male", "region": "Miri", "visitor_type": "local", "marketing_opt_in": False},
+                {"user_id": "cust05", "name": "Carol Lake", "email": "carol.lake@example.com", "password": "pw5", "role": "Customer", "age_group": "35-44", "gender": "Female", "region": "Kuching", "visitor_type": "domestic", "marketing_opt_in": True},
+                {"user_id": "cust06", "name": "Dave Hill", "email": "dave.hill@example.com", "password": "pw6", "role": "Customer", "age_group": "25-34", "gender": "Male", "region": "Kuching", "visitor_type": "local", "marketing_opt_in": False},
+                {"user_id": "cust07", "name": "Eve Forrest", "email": "eve.forrest@example.com", "password": "pw7", "role": "Customer", "age_group": "55+", "gender": "Female", "region": "Labuan", "visitor_type": "tourist", "marketing_opt_in": False}
             ]
             Database.users_col.insert_many(users)
 

@@ -1114,7 +1114,24 @@ class AdminConsole:
     def view_reports(self):
         # Interactive reports menu with multiple breakdowns
         while True:
+            # Load orders once and compute opt-in/unknown summary for analytics
+            orders = Order.get_all()
+            unique_user_ids = set([o.get('user_id') for o in orders if o.get('user_id')])
+            opted_in_count = 0
+            unknown_count = 0
+            for uid in unique_user_ids:
+                try:
+                    u = Customer.load_by_id(uid)
+                except Exception:
+                    u = None
+                if u and getattr(u, 'marketing_opt_in', False):
+                    opted_in_count += 1
+                else:
+                    unknown_count += 1
+
             print("\n--- ANALYTICS REPORT ---")
+            print("(Note: Demographics shown only for customers who opted-in to marketing; opted-out users are labelled 'UNKNOWN' in demographic breakdowns.)")
+            print(f"Opted-in customers (present in orders): {opted_in_count} | Unknown / opted-out: {unknown_count}")
             print("1. Summary (total revenue & orders)")
             print("2. Breakdown by Park (tickets)")
             print("3. Breakdown by Date Range")
@@ -1126,8 +1143,6 @@ class AdminConsole:
             choice = input("Select (number, 0 to go back): ").strip()
             if choice == '0' or choice == '':
                 return
-
-            orders = Order.get_all()
 
             if choice == '1':
                 total_rev = sum((o.get('total_cost') or 0) for o in orders)
@@ -1224,8 +1239,15 @@ class AdminConsole:
                 region_stats = {}
                 for o in orders:
                     uid = o.get('user_id')
-                    user = Customer.load_by_id(uid)
-                    region = getattr(user, 'region', None) or 'UNKNOWN'
+                    try:
+                        user = Customer.load_by_id(uid)
+                    except Exception:
+                        user = None
+                    # Only use real demographics when user opted in; otherwise treat as UNKNOWN
+                    if user and getattr(user, 'marketing_opt_in', False):
+                        region = getattr(user, 'region', None) or 'UNKNOWN'
+                    else:
+                        region = 'UNKNOWN'
                     s = region_stats.setdefault(region, {'revenue': 0.0, 'orders': 0})
                     s['revenue'] += (o.get('total_cost') or 0)
                     s['orders'] += 1
@@ -1242,8 +1264,15 @@ class AdminConsole:
                 unique_users_by_age = {}
                 for o in orders:
                     uid = o.get('user_id')
-                    user = Customer.load_by_id(uid)
-                    age = getattr(user, 'age_group', None) or 'UNKNOWN'
+                    try:
+                        user = Customer.load_by_id(uid)
+                    except Exception:
+                        user = None
+                    # Only reveal age group when user opted in; otherwise label UNKNOWN
+                    if user and getattr(user, 'marketing_opt_in', False):
+                        age = getattr(user, 'age_group', None) or 'UNKNOWN'
+                    else:
+                        age = 'UNKNOWN'
                     orders_by_age[age] = orders_by_age.get(age, 0) + 1
                     if age not in unique_users_by_age:
                         unique_users_by_age[age] = set()
