@@ -12,11 +12,7 @@ Optional (for in-terminal QR rendering):
 > Note: Tests live in `tests/` and use an in-memory MongoDB mock (mongomock). Testing dependencies are optional and not included by default.
 
 ## Quick start
-1. Open a terminal and change to the project directory:
-
-```cmd
-cd "c:\Users\User\OneDrive - Swinburne Sarawak\Software Architechture and Design\Assignment 3\ProposedProgram"
-```
+1. Open a terminal and change to the project directory. 
 
 2. (Recommended) Create and activate a virtual environment:
 
@@ -88,4 +84,5 @@ python -m tests.run_tests
 
 ## Contact
 If you want improvements or CI integrations, tell me what you'd like next (examples: add a `requirements-dev.txt`, add a `pyproject.toml`, create CI workflow that runs `tests/run_tests.py`).
+
 
