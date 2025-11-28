@@ -82,7 +82,5 @@ python -m tests.run_tests
 - "Cannot connect to MongoDB": make sure the MongoDB service is running and `MONGO_URI` is correct.
 - QR not rendering: ensure `segno` is installed and use a UTF-8 capable terminal (on Windows run `chcp 65001`).
 
-## Contact
-If you want improvements or CI integrations, tell me what you'd like next (examples: add a `requirements-dev.txt`, add a `pyproject.toml`, create CI workflow that runs `tests/run_tests.py`).
 
 
