@@ -47,8 +47,8 @@ On first run the app will seed initial data (users, parks, merchandise) if the d
 
 ## Using the CLI
 - Login with seeded users or register a new account.
-  - Seeded Admin: `email: admin`, `password: admin123`.
-  - Seeded Customers: `email: john` / `password: 123`, `email: jane` / `password: 123`.
+  - Seeded Admin: `email: admin@example.com`, `password: admin123`.
+  - Seeded Customers: `email: john.doe@example.com` / `password: 123`, `email: jane.smith@example.com` / `password: 123`.
 - Customers can browse parks, add tickets/merch to cart, checkout, view tickets, and contact support.
 - Admin can manage parks, merchandise, view reports and resolve support tickets.
 
@@ -81,6 +81,7 @@ python -m tests.run_tests
 ## Troubleshooting
 - "Cannot connect to MongoDB": make sure the MongoDB service is running and `MONGO_URI` is correct.
 - QR not rendering: ensure `segno` is installed and use a UTF-8 capable terminal (on Windows run `chcp 65001`).
+
 
 
 
