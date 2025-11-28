@@ -12,6 +12,7 @@ persistence live in their respective modules.
 
 import sys
 import getpass
+import re
 from database import Database
 from models import Customer, Admin
 from services import AuthenticationManager, AuditLog
@@ -63,7 +64,13 @@ class CLI:
         """
         print("\n--- Register ---")
         name = input("Name: ")
-        email = input("Email: ")
+        # Email validation loop (relaxed regex: requires @[text].[text])
+        email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+        while True:
+            email = input("Email: ").strip()
+            if email_pattern.match(email):
+                break
+            print("Invalid email format. Please enter a valid email (e.g., user@example.com).")
         pw = getpass.getpass("Password: ")
         if self.auth.register_customer(name, email, pw):
             # Offer optional demographic/profile capture
@@ -148,7 +155,13 @@ class CLI:
         Successful logins are logged to the audit trail.
         """
         print("\n--- Login ---")
-        email = input("Email: ")
+        # Email validation loop (relaxed regex: requires @[text].[text])
+        email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+        while True:
+            email = input("Email: ").strip()
+            if email_pattern.match(email):
+                break
+            print("Invalid email format. Please enter a valid email (e.g., user@example.com).")
         pw = getpass.getpass("Password: ")
         user = self.auth.login(email, pw)
 
@@ -181,4 +194,13 @@ from models import Merchandise as AdminConsole_Merch_Helper
 
 if __name__ == "__main__":
     app = CLI()
-    app.main_menu()
+    try:
+        app.main_menu()
+    except KeyboardInterrupt:
+        try:
+            # Attempt graceful logout if a user is logged in
+            app.auth.logout()
+        except Exception:
+            pass
+        print("\nInterrupted by user. Goodbye!")
+        sys.exit(0)
